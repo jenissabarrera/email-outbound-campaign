@@ -1,0 +1,38 @@
+.send-email-title {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .send-email-form {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  
+  .send-email-form .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .send-email-form label {
+    font-weight: bold;
+  }
+  
+  .send-email-form textarea {
+    resize: vertical;
+  }
+  .custom-input {
+    width: 400px; 
+  }
+  
+  .custom-textarea {
+    width: 400px; 
+    height: 400px; 
+  }
+
+  .btn-back {
+    background-color: #3B90AA;
+    color: white;
+    margin-left: 10px;
+  }

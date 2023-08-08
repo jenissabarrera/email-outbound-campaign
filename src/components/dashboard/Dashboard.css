@@ -1,0 +1,74 @@
+.dashboard-header {
+    font-family: "Roboto", Arial, sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    text-align: center;
+    margin-bottom: 15px; 
+  }
+
+  dashboard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .date-picker-container {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .date-range-picker .date-range-picker__label {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 24px;
+    color: #000000;
+    position: absolute;
+    float: right;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .clearfix::after {
+    content: "";
+    clear: both;
+    display: table;
+  }
+
+.date-range-picker {
+  text-align: right;
+  display: flex;
+  gap: 10px;
+}
+
+.table-container {
+  margin: 0 auto; /* Center the table */
+  max-width: 800px; /* Adjust the width as needed */
+}
+
+.back-button-container {
+  text-align: center; /* Center the back button */
+  margin-top: 20px; /* Add some space between the table and the button */
+}
+
+.select-campaign {
+  display: inline-block;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  margin-right: 10px;
+  border-radius: 4px;
+  font-size: 16px;
+  color: #333;
+}
+  
