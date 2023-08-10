@@ -3,7 +3,7 @@ import "./Dashboard.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useCampaigns } from "../use-campaign/UseCampaign.tsx";
-import Modal from "react-modal";
+// import Modal from "react-modal";
 import SelectCampaign from "../select-campaign/SelectCampaign.tsx";
 import {
   getStatus,
@@ -12,7 +12,7 @@ import {
   postCampaignDetails,
 } from "../../utils/GenesysCloudUtils.tsx";
 
-Modal.setAppElement("#root");
+// Modal.setAppElement("#root");
 
 interface EmailFormat {
   id: string;
@@ -27,8 +27,8 @@ const Dashboard: React.FC = () => {
   const [emails, setEmails] = useState<EmailFormat[]>([]);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
+  // const [modalIsOpen, setModalIsOpen] = useState(false);
+  // const [modalMessage, setModalMessage] = useState("");
 
   const bounceCount = emails.filter(
     (email) => email.status === "BOUNCE"
@@ -43,26 +43,65 @@ const Dashboard: React.FC = () => {
     setStartDate(start);
     setEndDate(end);
 
-    if (!campaignId) {
-      setModalMessage("Please select a campaign before choosing a date range");
-      setModalIsOpen(true);
-      return;
-    }
+    if (start && end) {
+      const formattedStartDate = start.toISOString();
+      const formattedEndDate = end.toISOString();
+      const dateRangeString = `${formattedStartDate}/${formattedEndDate}`;
 
-    if (!processedData.length) {
-      setModalMessage(
-        "No data returned for the selected date range and campaign."
-      );
-      setModalIsOpen(true);
+      setStartDate(start);
+      setEndDate(end);
+
+      if (!campaignId) {
+        alert("Please select a campaign before choosing a date range");
+        return;
+      }
+
+      getStatus(dateRangeString, campaignId)
+        .then((statusData: any) => {
+          console.log("status data", statusData);
+          // Process the data to extract the required fields for the table
+          const processedData: Email[] = [];
+          statusData.conversations.forEach((conversations: any) => {
+            conversations.participants.forEach((participant) => {
+              participant.sessions.forEach((session) => {
+                if (!session.extendedDeliveryStatus) return;
+                const recipient = session.addressTo || "N/A";
+                const subject =
+                  session.segments.length > 0
+                    ? session.segments[0].subject
+                    : "N/A";
+                const status = session.extendedDeliveryStatus || "N/A";
+                processedData.push({
+                  id: conversations.conversationId,
+                  recipient,
+                  subject,
+                  status,
+                });
+              });
+            });
+          });
+          setEmails(processedData);
+        })
+        .catch((error: Error) => {
+          console.error("Error fetching status data:", error);
+        });
+
+      console.log("dates and campaign id", dateRangeString, campaignId);
+
+      // The following lines should be inside the then-block if you want to use 'processedData'
+      // console.log("processed data", processedData);
+      // if (!processedData.length) {
+      //   alert("No data returned for the selected date range and campaign.");
+      // }
     }
   };
 
   return (
     <div className="container mt-4">
-      <Modal isOpen={modalIsOpen} onRequestClose={() => setModalIsOpen(false)}>
+      {/* <Modal isOpen={modalIsOpen} onRequestClose={() => setModalIsOpen(false)}>
         <p>{modalMessage}</p>
         <button onClick={() => setModalIsOpen(false)}>Close</button>
-      </Modal>
+      </Modal> */}
 
       <div className="dashboard-container">
         <div className="header-container">
