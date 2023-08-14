@@ -7,8 +7,9 @@ import { useCampaigns } from "../use-campaign/UseCampaign.tsx";
 import {
   getCampaign,
   postCampaignDetails,
-  postResponsemanagementResponses,
-  selectcampaign,
+  putResponsemanagementLibrary,
+  getExistingResponse,
+  getResponseManagementLibrary,
 } from "../../utils/GenesysCloudUtils.tsx";
 
 const SendEmail: React.FC = () => {
@@ -16,7 +17,6 @@ const SendEmail: React.FC = () => {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [isMessageDefault, setIsMessageDefault] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalTitle, setModalTitle] = useState("");
@@ -43,109 +43,112 @@ const SendEmail: React.FC = () => {
     }
   }, [isMessageDefault]);
 
-  useEffect(() => {
-    const fetchCampaigns = async () => {
-      try {
-        const fetchedCampaigns = await getCampaign();
-        if (fetchedCampaigns && Array.isArray(fetchedCampaigns.entities)) {
-          setCampaigns(fetchedCampaigns.entities);
-        } else {
-          console.error("Campaigns data is not an array");
-        }
-      } catch (error) {
-        console.error("Error while fetching campaigns", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCampaigns();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     let contentId = null;
+    let lastItem = null;
+    let entities = null;
+    let responseLibraryVersion: string | null = null;
 
-    try {
-      // Validate if a campaign is selected before submitting the form
-      if (!campaignId) {
-        throw new Error("Please select a campaign before sending the email.");
+    // Validate if a campaign is selected before submitting the form
+    if (!campaignId) {
+      throw new Error("Please select a campaign before sending the email.");
+    }
+
+    // Find the selected campaign from the fetched campaigns data
+    const selectedCampaign = campaigns.find(
+      (campaign) => campaign.id === campaignId
+    );
+
+    if (!selectedCampaign) {
+      throw new Error("Selected campaign not found in the fetched data.");
+    }
+
+    // Check if the required properties are available in the selected campaign
+    const requiredProps = [
+      "id",
+      "division",
+      "contactList",
+      "emailConfig",
+      "name",
+    ];
+    for (const prop of requiredProps) {
+      if (!selectedCampaign[prop]) {
+        throw new Error(
+          `Selected campaign data is missing the "${prop}" property.`
+        );
       }
+    }
 
-      // Find the selected campaign from the fetched campaigns data
-      const selectedCampaign = campaigns.find(
-        (campaign) => campaign.id === campaignId
-      );
+    console.log("isMessageDefault:", isMessageDefault);
 
-      if (!selectedCampaign) {
-        throw new Error("Selected campaign not found in the fetched data.");
-      }
+    if (!isMessageDefault) {
+      // Fetch the response library version
+      try {
+        const responseManagementLibraryData =
+          await getResponseManagementLibrary();
+        responseLibraryVersion = responseManagementLibraryData.version;
+        console.log("Response Library Version:", responseLibraryVersion);
 
-      // Check if the required properties are available in the selected campaign
-      const requiredProps = [
-        "id",
-        "division",
-        "contactList",
-        "emailConfig",
-        "name",
-      ];
-      for (const prop of requiredProps) {
-        if (!selectedCampaign[prop]) {
-          throw new Error(
-            `Selected campaign data is missing the "${prop}" property.`
-          );
-        }
-      }
-
-      console.log("isMessageDefault:", isMessageDefault);
-
-      if (!isMessageDefault) {
-        console.log(" Not Default Subject:", subject);
-        console.log(" Not Default Message:", message);
-        const postResponseManagementData =
-          await postResponsemanagementResponses(subject, message);
-
-        console.log("postResponseManagementData:", postResponseManagementData);
-
-        if (postResponseManagementData && postResponseManagementData.id) {
-          contentId = postResponseManagementData.id;
-          console.log(typeof contentId);
-          console.log("Not Default Content ID", contentId);
-        } else {
+        // Update the response management library
+        try {
+          const putResponsemanagementLibraryData =
+            await putResponsemanagementLibrary(
+              subject,
+              message,
+              responseLibraryVersion
+            );
           console.log(
-            "Error while posting response management data:",
-            postResponseManagementData
+            "putResponsemanagementLibraryData:",
+            putResponsemanagementLibraryData
           );
+        } catch (error) {
+          console.error("Error updating response management library:", error);
         }
-      } else if (isMessageDefault) {
-        contentId = selectedCampaign.emailConfig.contentTemplate.id;
-        console.log(typeof contentId);
-        console.log(" Default Content ID", contentId);
+
+        // Fetch existing responses
+        try {
+          const responsemanagementResponsesData = await getExistingResponse();
+          entities = responsemanagementResponsesData.entities;
+          lastItem = entities && entities[entities.length - 1];
+          console.log("Last response management data item:", lastItem);
+          contentId = lastItem.id;
+        } catch (error) {
+          console.error("Error fetching existing responses:", error);
+        }
+      } catch (error) {
+        console.error("Error fetching response library version:", error);
       }
+    } else if (isMessageDefault) {
+      contentId = selectedCampaign.emailConfig.contentTemplate.id;
+      console.log(typeof contentId);
+      console.log(" Default Content ID", contentId);
+    }
 
-      // Prepare the body for postCampaignDetails with the selected campaign data
-      const body = {
-        id: selectedCampaign.id,
-        name: selectedCampaign.name,
-        version: selectedCampaign.version,
-        division: selectedCampaign.division,
-        campaignStatus: "on",
-        contactList: selectedCampaign.contactList,
-        alwaysRunning: false,
-        messagesPerMinute: 10,
-        emailConfig: {
-          emailColumns: selectedCampaign.emailConfig.emailColumns,
-          contentTemplate: {
-            id: contentId,
-          },
-          fromAddress: selectedCampaign.emailConfig.fromAddress,
+    // Prepare the body for postCampaignDetails with the selected campaign data
+    const body = {
+      id: selectedCampaign.id,
+      name: selectedCampaign.name,
+      version: selectedCampaign.version,
+      division: selectedCampaign.division,
+      campaignStatus: "on",
+      contactList: selectedCampaign.contactList,
+      alwaysRunning: false,
+      messagesPerMinute: 10,
+      emailConfig: {
+        emailColumns: selectedCampaign.emailConfig.emailColumns,
+        contentTemplate: {
+          id: contentId,
         },
-      };
-
+        fromAddress: selectedCampaign.emailConfig.fromAddress,
+      },
+    };
+    try {
       // Call postCampaignDetails with the filled body and campaign ID
       console.log("Sending email with body:", body);
       await postCampaignDetails(campaignId, body);
+      // const patchCampaignDetails = await patchCampaignDetails(campaignId, body);
 
       handleShowModal("Success", "Email sent successfully!");
     } catch (error) {

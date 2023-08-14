@@ -1,8 +1,9 @@
+import { version } from "os";
 import { clientConfig } from "../components/clientConfig.js";
 import platformClient from "purecloud-platform-client-v2/dist/node/purecloud-platform-client-v2.js";
 
 const client = platformClient.ApiClient.instance;
-const { clientId, redirectUri } = clientConfig;
+const { clientId, redirectUri, libraryId } = clientConfig;
 const campaignData: any = {};
 
 const outboundApi = new platformClient.OutboundApi();
@@ -78,21 +79,37 @@ export function postCampaignDetails(campaignId: string, body: object) {
   });
 }
 
+export function getExistingResponse() {
+  return new Promise((resolve, reject) => {
+    let body = {
+      pageSize: 1000,
+    };
+
+    // Gets a list of existing responses.
+    responseManagementApi
+      .getResponsemanagementResponses(libraryId, body)
+      .then((responsemanagementResponsesData: any) => {
+        console.log(
+          `getResponsemanagementResponses success! data: ${JSON.stringify(
+            responsemanagementResponsesData,
+            null,
+            2
+          )}`
+        );
+        resolve(responsemanagementResponsesData);
+      })
+      .catch((err) => {
+        console.log(
+          "There was a failure calling getResponsemanagementResponses"
+        );
+        console.error(err);
+        reject(err);
+      });
+  });
+}
+
 export function getStatus(dates: string, outboundCampaignId: string) {
   console.log("getStatus", dates, outboundCampaignId);
-  // let body = {
-  //   interval: dates,
-  //   tableConfigurations: [
-  //     {
-  //       name: "MEDIA_TYPE_FILTER",
-  //       filter: {
-  //         mediaTypes: ["email"],
-  //         outboundCampaignIds: [outboundCampaignId],
-  //       },
-  //     },
-  //   ],
-  // };
-
   let body = {
     segmentFilters: [
       {
@@ -191,15 +208,17 @@ export function getStatus(dates: string, outboundCampaignId: string) {
   });
 }
 
-export function postResponsemanagementResponses(
+export function putResponsemanagementLibrary(
   subject: string,
-  emailBody: string
+  emailBody: string,
+  responseLibraryVersion: number
 ) {
   let body = {
     name: "Personalized Email Response",
+    version: responseLibraryVersion,
     libraries: [
       {
-        id: "f259917c-1938-4bb8-9dd0-33c97ce883ab",
+        id: libraryId,
         name: "Outbound Email Campaign",
       },
     ],
@@ -215,25 +234,65 @@ export function postResponsemanagementResponses(
         type: "subject",
       },
     ],
+    responseType: "CampaignEmailTemplate",
   };
-  console.log("postResponsemanagementResponses BODY:", body);
+  console.log("putResponsemanagementLibrary  BODY:", body);
   return new Promise((resolve, reject) => {
+    // responseManagementApi
+    //   .postResponsemanagementResponses(body)
+    //   .then((postResponseManagementData: any) => {
+    //     console.log(
+    //       `postResponsemanagementResponses success! data: ${JSON.stringify(
+    //         postResponseManagementData,
+    //         null,
+    //         2
+    //       )}`
+    //     );
+    //     resolve(postResponseManagementData);
+    //   })
+    //   .catch((err: any) => {
+    //     console.log(
+    //       "There was a failure calling postResponsemanagementResponses"
+    //     );
+    //     console.error(err);
+    //   });
+
     responseManagementApi
-      .postResponsemanagementResponses(body)
-      .then((postResponseManagementData: any) => {
+      .putResponsemanagementLibrary(libraryId, body)
+      .then((putResponsemanagementLibraryData: any) => {
         console.log(
-          `postResponsemanagementResponses success! data: ${JSON.stringify(
-            postResponseManagementData,
+          `putResponsemanagementLibrary success! data: ${JSON.stringify(
+            putResponsemanagementLibraryData,
             null,
             2
           )}`
         );
-        resolve(postResponseManagementData);
+        resolve(putResponsemanagementLibraryData);
       })
-      .catch((err: any) => {
+      .catch((err) => {
+        console.log("There was a failure calling putResponsemanagementLibrary");
+        console.error(err);
+      });
+  });
+}
+
+export function getResponseManagementLibrary() {
+  // Get details about an existing response library.
+  return new Promise((resolve, reject) => {
+    responseManagementApi
+      .getResponsemanagementLibrary(libraryId)
+      .then((getResponseManagementLibraryData: any) => {
         console.log(
-          "There was a failure calling postResponsemanagementResponses"
+          `getResponsemanagementLibrary success! data: ${JSON.stringify(
+            getResponseManagementLibraryData,
+            null,
+            2
+          )}`
         );
+        resolve(getResponseManagementLibraryData);
+      })
+      .catch((err) => {
+        console.log("There was a failure calling getResponsemanagementLibrary");
         console.error(err);
       });
   });

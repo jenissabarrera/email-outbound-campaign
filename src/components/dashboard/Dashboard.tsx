@@ -71,11 +71,23 @@ const Dashboard: React.FC = () => {
                     ? session.segments[0].subject
                     : "N/A";
                 const status = session.extendedDeliveryStatus || "N/A";
+                const formatDate = (dateString: string) => {
+                  const date = new Date(dateString);
+                  return (
+                    date.toLocaleDateString() + " " + date.toLocaleTimeString()
+                  );
+                };
+                console.log("from date", session.segments[0].segmentStart);
+                const deliveryDate = formatDate(
+                  session.segments[0].segmentStart || "N/A"
+                );
+
                 processedData.push({
                   id: conversations.conversationId,
                   recipient,
                   subject,
                   status,
+                  deliveryDate,
                 });
               });
             });
